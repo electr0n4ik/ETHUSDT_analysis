@@ -65,33 +65,44 @@ class FuturesProcessor:
         session.close()
 
     async def check_cointegration(self):
-    engine = create_engine('postgresql://postgres:12345@localhost:5432/postgres')
-    Session = sessionmaker(bind=engine)
-    session = Session()
+        engine = create_engine('postgresql://postgres:12345@localhost:5432/postgres')
+        Session = sessionmaker(bind=engine)
+        session = Session()
 
-    try:
-        # SQL-запрос для извлечения данных из базы данных
-        futures_data = session.query(FuturesTrade.timestamp, FuturesTrade.price).filter(
-            FuturesTrade.symbol == self.symbol
-        ).order_by(FuturesTrade.timestamp).all()
+        try:
+            # SQL-запрос для извлечения данных из базы данных
+            futures_data = session.query(
+                FuturesTrade.timestamp, 
+                FuturesTrade.price
+            ).filter(
+                FuturesTrade.symbol == self.symbol
+            ).order_by(
+                FuturesTrade.timestamp
+            ).all()
 
-        # Добавим отладочный вывод
-        print("Futures data:", futures_data)
+            # Добавим отладочный вывод
+            print(f"Futures data for {self.symbol}:", futures_data)
 
-        # DataFrame из полученных данных
-        futures_df = pd.DataFrame(futures_data, columns=['timestamp', f'{self.symbol}_price']).set_index('timestamp')
+            # Если нет данных, выходим из функции
+            if not futures_data:
+                print("No data available.")
+                return
 
-        # Расчет коинтеграции
-        result = sm.OLS(futures_df[f'{self.symbol}_price'], sm.add_constant(futures_df[f'{self.symbol}_price'])).fit()
+            # DataFrame из полученных данных
+            futures_df = pd.DataFrame(futures_data, columns=['timestamp', f'{self.symbol}_price']).set_index('timestamp')
 
-        # Вывод результатов
-        print(result.summary())
+            # Расчет коинтеграции
+            result = sm.OLS(futures_df[f'{self.symbol}_price'], sm.add_constant(futures_df[f'{self.symbol}_price'])).fit()
 
-    except Exception as e:
-        print(f"Error executing query: {e}")
-        await asyncio.sleep(10)
-    finally:
-        session.close()
+            # Вывод результатов
+            print(result.summary())
+
+        except Exception as e:
+            print(f"Error executing query: {e}")
+            await asyncio.sleep(10)
+        finally:
+            session.close()
+
 
 
     async def price_change_alert(data, symbol, price_change_threshold=0.01, time_frame=60):
@@ -122,7 +133,7 @@ class FuturesProcessor:
         except Exception as e:
             print(f"Произошла ошибка при обработке данных: {e}")
         
-        await asyncio.sleep(10)  # Проверяем каждые 10 секунд
+            await asyncio.sleep(10)  # Проверяем каждые 10 секунд
 
 
     async def run(self, trade_class, engine):
@@ -132,6 +143,6 @@ class FuturesProcessor:
                 
                 await self.handle_trade(response)
                 await self.delete_old_data()
-                # await self.check_cointegration()
+                await self.check_cointegration()
                 # print(response)
                 # await self.price_change_alert(response)
