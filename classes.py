@@ -29,20 +29,24 @@ class FuturesTrade(Base):
 class FuturesProcessor:
     def __init__(self, symbol):
         self.symbol = symbol
+        self.engine = create_engine(
+            'postgresql://postgres:12345@localhost:5432/postgres'
+        )
 
-    @classmethod
-    async def create_table(cls, table_name):
-        engine = create_engine(
-            'postgresql://postgres:12345@localhost:5432/postgres')
-        if not engine.dialect.has_table(engine, table_name):
-            Base.metadata.create_all(engine)
-            trade_entry = FuturesTrade(symbol=cls.symbol, price=0,
-                                       timestamp=datetime.now(),
-                                       table_name=table_name)
-            session = cls.create_session(engine)
-            session.add(trade_entry)
-            session.commit()
-            session.close()
+        self.session = self.create_session(self.engine)
+        self.create_table(self.symbol)
+
+    def create_table(self, table_name):
+        if not self.engine.dialect.has_table(self.engine.connect(),
+                                             table_name):
+            Base.metadata.create_all(self.engine)
+            trade_entry = FuturesTrade(
+                symbol=self.symbol,
+                price=0,
+                timestamp=datetime.utcnow()
+            )
+            self.session.add(trade_entry)
+            self.session.commit()
 
     @staticmethod
     def create_session(engine):
@@ -87,9 +91,10 @@ class FuturesProcessor:
 
         # Удаление данных старше 1 часа для конкретной котировки
         session.query(FuturesTrade).filter(
-            FuturesTrade.timestamp < time.strftime('%Y-%m-%d %H:%M:%S',
-                                                   time.gmtime(
-                                                       time.time() - 3600)),
+            FuturesTrade.timestamp < time.strftime(
+                '%Y-%m-%d %H:%M:%S',
+                time.gmtime(
+                    time.time() - 3600)),
             FuturesTrade.symbol == self.symbol
         ).delete()
         session.commit()
@@ -158,7 +163,7 @@ class FuturesProcessor:
             if len(price_history) >= 2:
                 previous_price = price_history[0][0]
                 percent_change = (
-                                             current_price - previous_price) / previous_price
+                                         current_price - previous_price) / previous_price
 
                 if abs(percent_change) >= price_change_threshold:
                     if percent_change > 0:
@@ -174,7 +179,7 @@ class FuturesProcessor:
 
             await asyncio.sleep(10)  # Проверяем каждые 10 секунд
 
-    async def run(self, trade_class, engine):
+    async def run(self):
         async with websockets.connect(
                 f"wss://stream.binance.com:9443/ws/{self.symbol}@trade") as ws:
             while True:
@@ -182,5 +187,7 @@ class FuturesProcessor:
 
                 await self.handle_trade(response)
                 await self.delete_old_data()
-                await self.check_cointegration()
-                await self.price_change_alert(response, self.symbol, 'ethusdt')
+                # await self.check_cointegration()
+                # await self.price_change_alert(response,
+                # self.symbol,
+                # 'ethusdt')
