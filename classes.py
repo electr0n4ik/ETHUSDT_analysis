@@ -1,17 +1,25 @@
 import asyncio
+import datetime
 import json
 import time
 import statsmodels.api as sm
 import pandas as pd
 import websockets
-import numpy as np
+
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
+from sqlalchemy.orm import declarative_base, Session
+from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
+
+price_history = []
+
 Base = declarative_base()
 
 class FuturesTrade(Base):
+
     __tablename__ = 'futures_trades'
 
     id = Column(Integer, primary_key=True)
@@ -19,9 +27,29 @@ class FuturesTrade(Base):
     price = Column(Numeric)
     timestamp = Column(DateTime)
 
+
+
 class FuturesProcessor:
     def __init__(self, symbol):
         self.symbol = symbol
+
+    @classmethod
+    async def create_table(cls, table_name):
+        engine = create_engine('postgresql://postgres:12345@localhost:5432/postgres')
+        if not engine.dialect.has_table(engine, table_name):
+            Base.metadata.create_all(engine)
+            trade_entry = FuturesTrade(symbol=cls.symbol, price=0, timestamp=datetime.now(), table_name=table_name)
+            session = cls.create_session(engine)
+            session.add(trade_entry)
+            session.commit()
+            session.close()
+
+    @staticmethod
+    def create_session(engine):
+        Session = sessionmaker(bind=engine)
+        return Session()
+
+
 
     async def handle_trade(self, data):
         try:
@@ -29,18 +57,18 @@ class FuturesProcessor:
                 data = json.loads(data)
                 print(f"Торговая пара ({self.symbol}): {data['s']}, Цена: {data['p']} {data['s']}")
                 trade_symbol = data['s']
-                trade_price = data['p']
+                trade_price = float(data['p'])
 
                 engine = create_engine('postgresql://postgres:12345@localhost:5432/postgres')
-                Session = sessionmaker(bind=engine)
-                session = Session()
+                session = self.create_session(engine)
 
                 # Вставка данных в таблицу
                 trade_entry = FuturesTrade(
                     symbol=trade_symbol,
                     price=trade_price,
-                    timestamp=time.strftime('%Y-%m-%d %H:%M:%S')
+                    timestamp=datetime.now()
                 )
+
                 session.add(trade_entry)
                 session.commit()
                 session.close()
@@ -50,6 +78,7 @@ class FuturesProcessor:
         except Exception as e:
             print(f"Произошла ошибка: {e}")
             await asyncio.sleep(10)
+
 
     async def delete_old_data(self):
         engine = create_engine('postgresql://postgres:12345@localhost:5432/postgres')
@@ -70,18 +99,19 @@ class FuturesProcessor:
         session = Session()
 
         try:
+            # for i in session.query(FuturesTrade.timestamp, 
+            #                        FuturesTrade.price,
+            #                        FuturesTrade.symbol).all():
+            #     print(i)
             # SQL-запрос для извлечения данных из базы данных
             futures_data = session.query(
                 FuturesTrade.timestamp, 
                 FuturesTrade.price
             ).filter(
-                FuturesTrade.symbol == self.symbol
+                FuturesTrade.symbol == 'BTCUSDT'#self.symbol
             ).order_by(
                 FuturesTrade.timestamp
             ).all()
-
-            # Добавим отладочный вывод
-            print(f"Futures data for {self.symbol}:", futures_data)
 
             # Если нет данных, выходим из функции
             if not futures_data:
@@ -134,6 +164,7 @@ class FuturesProcessor:
             print(f"Произошла ошибка при обработке данных: {e}")
         
             await asyncio.sleep(10)  # Проверяем каждые 10 секунд
+            
 
 
     async def run(self, trade_class, engine):
@@ -144,5 +175,6 @@ class FuturesProcessor:
                 await self.handle_trade(response)
                 await self.delete_old_data()
                 await self.check_cointegration()
-                # print(response)
-                # await self.price_change_alert(response)
+                await self.price_change_alert(response, self.symbol, 'ethusdt')
+
+
