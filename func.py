@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from classes import FuturesTrade
 
 
-def find_regression_coefficient(df, btc, eth):
+async def find_regression_coefficient(df, btc, eth):
     """
     Находит коэффициент регрессии методом наименьших квадратов.
 
@@ -20,8 +20,8 @@ def find_regression_coefficient(df, btc, eth):
     Returns:
     - Коэффициент регрессии
     """
-    independent_variable = df[btc].values
-    dependent_variable = df[eth].values
+    independent_variable = df[btc].astype(float).values
+    dependent_variable = df[eth].astype(float).values
 
     A = np.vstack([independent_variable, np.ones(len(independent_variable))]).T
     m, c = np.linalg.lstsq(A, dependent_variable, rcond=None)[0]
@@ -29,7 +29,8 @@ def find_regression_coefficient(df, btc, eth):
     return m
 
 
-def plot_ethusdt_regression(eth_df, btc_df):
+async def plot_ethusdt_regression(eth_df, btc_df):
+    # TODO eth_df, btc_df верные
     # Объединяем данные из двух DataFrame
     merged_df = pd.merge(eth_df, btc_df, on='Timestamp',
                          suffixes=('_eth', '_btc'))
@@ -70,9 +71,9 @@ def plot_ethusdt_regression(eth_df, btc_df):
     plt.show()
 
 
-if __name__ == "__main__":
-
-    plot_ethusdt_regression(eth_df, btc_df)
+# if __name__ == "__main__":
+#
+#     plot_ethusdt_regression(eth_df, btc_df)
 
 
 # Функция для создания подключения к базе данных PostgreSQL

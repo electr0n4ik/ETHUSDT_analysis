@@ -1,8 +1,9 @@
 import asyncio
+
 from sqlalchemy import create_engine
+
 from classes import FuturesProcessor
-from func import create_postgresql_connection, read_and_print_data, \
-    close_database_connection
+from func import plot_ethusdt_regression
 
 
 async def main():
@@ -12,9 +13,13 @@ async def main():
     eth_processor = FuturesProcessor('ethusdt')
     btc_processor = FuturesProcessor('btcusdt')
 
+    eth_df = await eth_processor.read_data_to_dataframe()
+    btc_df = await btc_processor.read_data_to_dataframe()
+
     eth_task = asyncio.create_task(eth_processor.run())
     btc_task = asyncio.create_task(btc_processor.run())
 
+    await plot_ethusdt_regression(eth_df, btc_df)
     await asyncio.gather(eth_task, btc_task)
 
 

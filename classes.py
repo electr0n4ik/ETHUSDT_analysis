@@ -77,9 +77,9 @@ class FuturesProcessor:
             print(f"Произошла ошибка: {e}")
             await asyncio.sleep(10)
 
-    async def read_data_to_dataframe(self, symbol):
+    async def read_data_to_dataframe(self):
         trades = self.session.query(FuturesTrade).filter_by(
-            symbol=symbol).all()
+            symbol=self.symbol.upper()).all()
         data = {'ID': [], 'Symbol': [], 'Price': [], 'Timestamp': []}
 
         for trade in trades:
@@ -99,4 +99,4 @@ class FuturesProcessor:
                 response = await ws.recv()
 
                 await self.handle_trade(response)
-                # await self.read_data_to_dataframe(self.symbol.upper())
+                # await self.read_data_to_dataframe()
