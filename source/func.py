@@ -1,8 +1,12 @@
+import os
+import sys
+
 import numpy as np
 import pandas as pd
 
-
 # from classes import FuturesTrade
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 async def check_eth_price(current_price):
@@ -94,7 +98,6 @@ async def ethusdt_regression(eth_df, btc_df):
     adjusted_price = await adjust_ethusdt_price(merged_df)
 
     print(adjusted_price)
-
 
 # # Функция для создания подключения к базе данных PostgreSQL
 # def create_postgresql_connection(database_url):

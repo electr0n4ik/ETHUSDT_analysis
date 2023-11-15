@@ -1,6 +1,8 @@
 import asyncio
-import datetime
+from datetime import datetime
 import json
+import os
+import sys
 
 import pandas as pd
 import websockets
@@ -13,7 +15,9 @@ from sqlalchemy import (create_engine,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from func import check_eth_price
+from source.func import check_eth_price
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 price_history = []
 

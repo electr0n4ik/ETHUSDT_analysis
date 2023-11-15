@@ -1,7 +1,7 @@
 import asyncio
 
-from classes import FuturesProcessor
-from func import ethusdt_regression
+from source.classes import FuturesProcessor
+from source.func import ethusdt_regression
 
 
 async def main():

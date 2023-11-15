@@ -4,9 +4,9 @@ import sys
 import pandas as pd
 import pytest
 
-from func import (find_regression_coefficient,
-                  adjust_ethusdt_price,
-                  ethusdt_regression)
+from source.func import (find_regression_coefficient,
+                         adjust_ethusdt_price,
+                         ethusdt_regression)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
