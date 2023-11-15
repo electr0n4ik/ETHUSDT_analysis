@@ -3,12 +3,16 @@ import datetime
 import json
 import time
 from datetime import datetime
-
 import pandas as pd
-import statsmodels.api as sm
 import websockets
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, \
-    DateTime
+from sqlalchemy import (create_engine,
+                        Column,
+                        Integer,
+                        String,
+                        Numeric,
+                        DateTime,
+                        delete,
+                        select)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -77,73 +81,22 @@ class FuturesProcessor:
                 session.commit()
                 session.close()
 
-                # Пауза в 10 секунд
                 await asyncio.sleep(1)
         except Exception as e:
             print(f"Произошла ошибка: {e}")
             await asyncio.sleep(10)
 
     async def delete_old_data(self):
-        engine = create_engine(
-            'postgresql://postgres:12345@localhost:5432/postgres')
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        async with self.engine.begin() as conn:
 
-        # Удаление данных старше 1 часа для конкретной котировки
-        session.query(FuturesTrade).filter(
-            FuturesTrade.timestamp < time.strftime(
-                '%Y-%m-%d %H:%M:%S',
-                time.gmtime(
-                    time.time() - 3600)),
-            FuturesTrade.symbol == self.symbol
-        ).delete()
-        session.commit()
-        session.close()
-
-    async def check_cointegration(self):
-        engine = create_engine(
-            'postgresql://postgres:12345@localhost:5432/postgres')
-        Session = sessionmaker(bind=engine)
-        session = Session()
-
-        try:
-            # for i in session.query(FuturesTrade.timestamp, 
-            #                        FuturesTrade.price,
-            #                        FuturesTrade.symbol).all():
-            #     print(i)
-            # SQL-запрос для извлечения данных из базы данных
-            futures_data = session.query(
-                FuturesTrade.timestamp,
-                FuturesTrade.price
-            ).filter(
-                FuturesTrade.symbol == 'BTCUSDT'  # self.symbol
-            ).order_by(
-                FuturesTrade.timestamp
-            ).all()
-
-            # Если нет данных, выходим из функции
-            if not futures_data:
-                print("No data available.")
-                return
-
-            # DataFrame из полученных данных
-            futures_df = pd.DataFrame(futures_data, columns=['timestamp',
-                                                             f'{self.symbol}_price']).set_index(
-                'timestamp')
-
-            # Расчет коинтеграции
-            result = sm.OLS(futures_df[f'{self.symbol}_price'],
-                            sm.add_constant(
-                                futures_df[f'{self.symbol}_price'])).fit()
-
-            # Вывод результатов
-            print(result.summary())
-
-        except Exception as e:
-            print(f"Error executing query: {e}")
-            await asyncio.sleep(10)
-        finally:
-            session.close()
+            await conn.execute(
+                delete(FuturesTrade)
+                .where(FuturesTrade.timestamp < time.strftime(
+                    '%Y-%m-%d %H:%M:%S',
+                    time.gmtime(
+                        time.time() - 3600)))
+                .where(FuturesTrade.symbol == self.symbol)
+            )
 
     async def price_change_alert(data, symbol, price_change_threshold=0.01,
                                  time_frame=60):
@@ -154,16 +107,15 @@ class FuturesProcessor:
 
             price_history.append((current_price, timestamp))
 
-            # Оставляем только данные, которые находятся в заданном временном диапазоне
-            while price_history and timestamp - price_history[0][
-                1] > time_frame * 60:
+            while (price_history and timestamp -
+                   price_history[0][1] > time_frame * 60):
                 price_history.pop(0)
 
             # Рассчитываем изменение цены
             if len(price_history) >= 2:
                 previous_price = price_history[0][0]
-                percent_change = (
-                                         current_price - previous_price) / previous_price
+                percent_change = ((current_price - previous_price)
+                                  / previous_price)
 
                 if abs(percent_change) >= price_change_threshold:
                     if percent_change > 0:
@@ -172,12 +124,26 @@ class FuturesProcessor:
                         movement = "Цена падает"
 
                     print(
-                        f"Изменение цены на {abs(percent_change) * 100:.2f}% за последние {time_frame} минут. {movement}")
+                        f"Изменение цены на {abs(percent_change) * 100:.2f}% "
+                        f"за последние {time_frame} минут. {movement}")
 
         except Exception as e:
             print(f"Произошла ошибка при обработке данных: {e}")
 
             await asyncio.sleep(10)  # Проверяем каждые 10 секунд
+
+    async def create_dataframe(self):
+        async with self.engine.begin() as conn:
+            result = await conn.execute(
+                select(FuturesTrade)
+                .where(FuturesTrade.symbol == self.symbol)
+            )
+
+            rows = [dict(row) for row in result.fetchall()]
+
+            df = pd.DataFrame(rows)
+
+            return df
 
     async def run(self):
         async with websockets.connect(
@@ -186,7 +152,7 @@ class FuturesProcessor:
                 response = await ws.recv()
 
                 await self.handle_trade(response)
-                await self.delete_old_data()
+                # await self.delete_old_data()
                 # await self.check_cointegration()
                 # await self.price_change_alert(response,
                 # self.symbol,
