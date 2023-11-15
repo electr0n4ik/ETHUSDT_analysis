@@ -3,24 +3,23 @@ import asyncio
 from sqlalchemy import create_engine
 
 from classes import FuturesProcessor
+from func import ethusdt_regression
 
 
 async def main():
-    engine = create_engine(
-        'postgresql://postgres:12345@localhost:5432/postgres')
 
     eth_processor = FuturesProcessor('ethusdt')
     btc_processor = FuturesProcessor('btcusdt')
 
-    # eth_df = await eth_processor.read_data_to_dataframe()
-    # btc_df = await btc_processor.read_data_to_dataframe()
+    eth_df = await eth_processor.read_data_to_dataframe()
+    btc_df = await btc_processor.read_data_to_dataframe()
 
     eth_task = asyncio.create_task(eth_processor.run())
     btc_task = asyncio.create_task(btc_processor.run())
 
     await asyncio.gather(eth_task, btc_task)
 
-    # await plot_ethusdt_regression(eth_df, btc_df)
+    # await ethusdt_regression(eth_df, btc_df)
 
 
 if __name__ == '__main__':

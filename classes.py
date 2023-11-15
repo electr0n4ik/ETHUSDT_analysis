@@ -14,7 +14,7 @@ from sqlalchemy import (create_engine,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from func import check_eth_price
+from func import check_eth_price, ethusdt_regression
 
 price_history = []
 
@@ -157,4 +157,5 @@ class FuturesProcessor:
                 response = await ws.recv()
 
                 await self.handle_trade(response)
+
                 # await self.read_data_to_dataframe()

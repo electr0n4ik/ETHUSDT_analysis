@@ -49,65 +49,44 @@ async def find_regression_coefficient(df, btc, eth):
     return m
 
 
-async def plot_ethusdt_regression(eth_df, btc_df):
+async def adjust_ethusdt_price(data_frame):
+    """
+    Adjusts the ethusdt price by excluding the influence of btcusdt.
+
+    Parameters:
+    - data_frame: DataFrame with 'Price_eth' and 'Price_btc' columns.
+
+    Returns:
+    - Adjusted ethusdt price.
+    """
+    # Находим коэффициент регрессии
+    regression_coefficient = await find_regression_coefficient(data_frame,
+                                                               'Price_btc',
+                                                               'Price_eth')
+
+    # Создаем копию данных для избежания изменения оригинального датафрейма
+    adjusted_data = data_frame.copy()
+    adjusted_data['Price_btc'] = adjusted_data['Price_btc'].astype(float) # TODO
+    # Применяем коэффициент регрессии
+    adjusted_data['ethusdt_adjusted'] = adjusted_data['Price_eth'] - (
+            adjusted_data['Price_btc'] * regression_coefficient)
+
+    # Возвращаем скорректированную цену ethusdt
+    return adjusted_data['ethusdt_adjusted']
+
+
+async def ethusdt_regression(eth_df, btc_df):
     eth_df['Timestamp'] = eth_df['Timestamp'].dt.round('S')
     btc_df['Timestamp'] = btc_df['Timestamp'].dt.round('S')
-
-    # eth_timestamps = set(eth_df['Timestamp'])
-    # btc_timestamps = set(btc_df['Timestamp'])
-    #
-    # print("Timestamps unique to ETH:", eth_timestamps - btc_timestamps)
-    # print("Timestamps unique to BTC:", btc_timestamps - eth_timestamps)
 
     # Объединяем данные из двух DataFrame
     merged_df = pd.merge(eth_df, btc_df, on='Timestamp',
                          suffixes=('_eth', '_btc'))
 
-    # Находим коэффициент регрессии
-    regression_coefficient = await find_regression_coefficient(merged_df,
-                                                               'Price_btc',
-                                                               'Price_eth')
+    # Вызываем функцию для получения скорректированной цены ethusdt
+    adjusted_price = adjust_ethusdt_price(merged_df)
 
-    # Выбираем только нужные столбцы
-    selected_data = merged_df[['Timestamp', 'Price_eth', 'Price_btc']].copy()
-
-    selected_data.loc[:, 'Price_eth'] = pd.to_numeric(
-        selected_data['Price_eth'])
-    selected_data.loc[:, 'Price_btc'] = pd.to_numeric(
-        selected_data['Price_btc'])
-    selected_data['ethusdt_adjusted'] = pd.to_numeric(
-        selected_data['Price_eth']) - (pd.to_numeric(
-        selected_data['Price_btc']) * regression_coefficient)
-
-    # Используем numpy для подготовки данных
-    X = selected_data['Price_btc'].astype(float).values.reshape(-1, 1)
-    y = selected_data['ethusdt_adjusted'].astype(float).values
-
-    # Выполняем линейную регрессию
-    A = np.vstack([X.flatten(), np.ones(len(X))]).T
-    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
-
-    # # Предсказание значений
-    # predicted_ethusdt = m * X.flatten() + c
-    #
-    # # Построим график
-    # plt.figure(figsize=(10, 6))
-    # plt.scatter(selected_data['Price_btc'], selected_data['ethusdt_adjusted'],
-    #             label='ETHUSDT Adjusted')
-    # plt.plot(X.flatten(), predicted_ethusdt, color='red', linewidth=2,
-    #          label='Regression Line')
-    # plt.xlabel('BTCUSDT Price')
-    # plt.ylabel('ETHUSDT Adjusted Price')
-    # plt.legend()
-    # plt.title('ETHUSDT Regression Adjusted')
-    #
-    # # Save the plot to a file
-    # plt.savefig('ethusdt_regression_plot.png')
-
-# if __name__ == "__main__":
-#
-#     plot_ethusdt_regression(eth_df, btc_df)
-
+    return adjusted_price
 
 # # Функция для создания подключения к базе данных PostgreSQL
 # def create_postgresql_connection(database_url):
