@@ -1,3 +1,5 @@
+import asyncio
+
 import numpy as np
 import pandas as pd
 
@@ -66,7 +68,11 @@ async def adjust_ethusdt_price(data_frame):
 
     # Создаем копию данных для избежания изменения оригинального датафрейма
     adjusted_data = data_frame.copy()
-    adjusted_data['Price_btc'] = adjusted_data['Price_btc'].astype(float) # TODO
+
+    # Привести значения в столбцах к float
+    adjusted_data['Price_eth'] = adjusted_data['Price_eth'].astype(float)
+    adjusted_data['Price_btc'] = adjusted_data['Price_btc'].astype(float)
+
     # Применяем коэффициент регрессии
     adjusted_data['ethusdt_adjusted'] = adjusted_data['Price_eth'] - (
             adjusted_data['Price_btc'] * regression_coefficient)
@@ -76,6 +82,9 @@ async def adjust_ethusdt_price(data_frame):
 
 
 async def ethusdt_regression(eth_df, btc_df):
+    # TODO дошел до этой функции
+    # TODO хочу ее сделать основной для вывода независимой цены ethusdt
+
     eth_df['Timestamp'] = eth_df['Timestamp'].dt.round('S')
     btc_df['Timestamp'] = btc_df['Timestamp'].dt.round('S')
 
@@ -84,9 +93,10 @@ async def ethusdt_regression(eth_df, btc_df):
                          suffixes=('_eth', '_btc'))
 
     # Вызываем функцию для получения скорректированной цены ethusdt
-    adjusted_price = adjust_ethusdt_price(merged_df)
+    adjusted_price = await adjust_ethusdt_price(merged_df)
 
-    return adjusted_price
+    print(adjusted_price)
+
 
 # # Функция для создания подключения к базе данных PostgreSQL
 # def create_postgresql_connection(database_url):

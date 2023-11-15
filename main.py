@@ -16,10 +16,12 @@ async def main():
 
     eth_task = asyncio.create_task(eth_processor.run())
     btc_task = asyncio.create_task(btc_processor.run())
+    regression_task = asyncio.create_task(ethusdt_regression(eth_df, btc_df))
 
-    await asyncio.gather(eth_task, btc_task)
+    await asyncio.gather(eth_task, btc_task, regression_task)
 
-    # await ethusdt_regression(eth_df, btc_df)
+    # await asyncio.gather(eth_task, btc_task)
+    # await ethusdt_regression(eth_df, btc_df) # TODO для теста
 
 
 if __name__ == '__main__':
