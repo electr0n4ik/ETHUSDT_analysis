@@ -1,8 +1,8 @@
 import asyncio
-from datetime import datetime
 import json
 import os
 import sys
+from datetime import datetime, timedelta
 
 import pandas as pd
 import websockets
@@ -15,7 +15,7 @@ from sqlalchemy import (create_engine,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from source.func import check_eth_price
+from source.func import check_eth_price, print_suc_del
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -145,6 +145,34 @@ class FuturesProcessor:
         df = pd.DataFrame(data)
         return df
 
+    async def delete_old_trades(self):
+        """
+        Удаляет записи из базы данных, старше 60 минут.
+        """
+        sixty_minutes_ago = datetime.now() - timedelta(minutes=60)
+
+        try:
+            # Выбираем записи, старше 60 минут
+
+            old_trades = self.session.query(FuturesTrade).filter(
+                FuturesTrade.timestamp < sixty_minutes_ago
+            ).all()
+            if old_trades:
+                await print_suc_del()
+                # Удаляем найденные записи
+                for trade in old_trades:
+                    self.session.delete(trade)
+
+                # Коммитим изменения в базе данных
+                self.session.commit()
+            else:
+                return
+        except Exception as e:
+            print(f"Произошла ошибка при удалении старых записей: {e}")
+        finally:
+            # Закрываем сессию
+            self.session.close()
+
     async def run(self):
         """
         Запускает подключение к WebSocket и цикл обработки сделок.
@@ -161,6 +189,10 @@ class FuturesProcessor:
             while True:
                 response = await ws.recv()
 
-                await self.handle_trade(response)
+                handle_trade_task = asyncio.create_task(
+                    self.handle_trade(response))
+                delete_old_trades_task = asyncio.create_task(
+                    self.delete_old_trades())
+                await asyncio.gather(handle_trade_task, delete_old_trades_task)
 
                 # await self.read_data_to_dataframe()

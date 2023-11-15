@@ -1,12 +1,16 @@
+import asyncio
 import os
 import sys
 
 import numpy as np
 import pandas as pd
 
-# from classes import FuturesTrade
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
+async def print_suc_del():
+    await asyncio.sleep(1)
+    print("Удаление старых данных выполнено.")
 
 
 async def check_eth_price(current_price):
@@ -98,27 +102,3 @@ async def ethusdt_regression(eth_df, btc_df):
     adjusted_price = await adjust_ethusdt_price(merged_df)
 
     print(adjusted_price)
-
-# # Функция для создания подключения к базе данных PostgreSQL
-# def create_postgresql_connection(database_url):
-#     engine = create_engine(database_url)
-#     Session = sessionmaker(bind=engine)
-#     return engine, Session()
-#
-#
-# # Функция для считывания и вывода данных из таблицы
-# def read_and_print_data(session):
-#     trades = session.query(FuturesTrade).all()
-#     for trade in trades:
-#         print(
-#             f"ID: {trade.id}, "
-#             f"Symbol: {trade.symbol}, "
-#             f"Price: {trade.price}, "
-#             f"Timestamp: {trade.timestamp}")
-#
-#
-# # Функция для закрытия подключения к базе данных
-# def close_database_connection(engine):
-#     if engine:
-#         engine.dispose()
-#         print("Connection closed.")

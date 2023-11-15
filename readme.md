@@ -46,7 +46,10 @@ C некоторой вероятностью выполнять сделки.**
 pip install -r requirements.txt
 python main.py
 ```
-
+#### Вывод данных из БД:
+```shell
+python print_data.py
+```
 ### Запуск тестов из командной строки:
 
 ```shell
