@@ -1,18 +1,16 @@
 import asyncio
 import datetime
 import json
-import time
-from datetime import datetime
 import pandas as pd
+from datetime import datetime
+
 import websockets
 from sqlalchemy import (create_engine,
                         Column,
                         Integer,
                         String,
                         Numeric,
-                        DateTime,
-                        delete,
-                        select)
+                        DateTime)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -44,13 +42,6 @@ class FuturesProcessor:
         if not self.engine.dialect.has_table(self.engine.connect(),
                                              table_name):
             Base.metadata.create_all(self.engine)
-            trade_entry = FuturesTrade(
-                symbol=self.symbol,
-                price=0,
-                timestamp=datetime.utcnow()
-            )
-            self.session.add(trade_entry)
-            self.session.commit()
 
     @staticmethod
     def create_session(engine):
@@ -62,21 +53,21 @@ class FuturesProcessor:
             if data:
                 data = json.loads(data)
                 print(
-                    f"Торговая пара ({self.symbol}): {data['s']}, Цена: {data['p']} {data['s']}")
+                    f"Торговая пара ({self.symbol}): "
+                    f"{data['s']}, Цена: {data['p']} {data['s']}")
                 trade_symbol = data['s']
+
                 trade_price = float(data['p'])
 
                 engine = create_engine(
                     'postgresql://postgres:12345@localhost:5432/postgres')
                 session = self.create_session(engine)
 
-                # Вставка данных в таблицу
                 trade_entry = FuturesTrade(
                     symbol=trade_symbol,
                     price=trade_price,
                     timestamp=datetime.now()
                 )
-
                 session.add(trade_entry)
                 session.commit()
                 session.close()
@@ -86,74 +77,26 @@ class FuturesProcessor:
             print(f"Произошла ошибка: {e}")
             await asyncio.sleep(10)
 
-    async def delete_old_data(self):
-        async with self.engine.begin() as conn:
+    async def read_data_to_dataframe(self, symbol):
+        trades = self.session.query(FuturesTrade).filter_by(
+            symbol=symbol).all()
+        data = {'ID': [], 'Symbol': [], 'Price': [], 'Timestamp': []}
 
-            await conn.execute(
-                delete(FuturesTrade)
-                .where(FuturesTrade.timestamp < time.strftime(
-                    '%Y-%m-%d %H:%M:%S',
-                    time.gmtime(
-                        time.time() - 3600)))
-                .where(FuturesTrade.symbol == self.symbol)
-            )
+        for trade in trades:
+            data['ID'].append(trade.id)
+            data['Symbol'].append(trade.symbol)
+            data['Price'].append(trade.price)
+            data['Timestamp'].append(trade.timestamp)
 
-    async def price_change_alert(data, symbol, price_change_threshold=0.01,
-                                 time_frame=60):
-        try:
-            data = json.loads(data)
-            current_price = data["p"]
-            timestamp = time.time()
-
-            price_history.append((current_price, timestamp))
-
-            while (price_history and timestamp -
-                   price_history[0][1] > time_frame * 60):
-                price_history.pop(0)
-
-            # Рассчитываем изменение цены
-            if len(price_history) >= 2:
-                previous_price = price_history[0][0]
-                percent_change = ((current_price - previous_price)
-                                  / previous_price)
-
-                if abs(percent_change) >= price_change_threshold:
-                    if percent_change > 0:
-                        movement = "Цена растет"
-                    else:
-                        movement = "Цена падает"
-
-                    print(
-                        f"Изменение цены на {abs(percent_change) * 100:.2f}% "
-                        f"за последние {time_frame} минут. {movement}")
-
-        except Exception as e:
-            print(f"Произошла ошибка при обработке данных: {e}")
-
-            await asyncio.sleep(10)  # Проверяем каждые 10 секунд
-
-    async def create_dataframe(self):
-        async with self.engine.begin() as conn:
-            result = await conn.execute(
-                select(FuturesTrade)
-                .where(FuturesTrade.symbol == self.symbol)
-            )
-
-            rows = [dict(row) for row in result.fetchall()]
-
-            df = pd.DataFrame(rows)
-
-            return df
+        df = pd.DataFrame(data)
+        return df
 
     async def run(self):
+
         async with websockets.connect(
                 f"wss://stream.binance.com:9443/ws/{self.symbol}@trade") as ws:
             while True:
                 response = await ws.recv()
 
                 await self.handle_trade(response)
-                # await self.delete_old_data()
-                # await self.check_cointegration()
-                # await self.price_change_alert(response,
-                # self.symbol,
-                # 'ethusdt')
+                # await self.read_data_to_dataframe(self.symbol.upper())

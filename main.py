@@ -1,8 +1,8 @@
 import asyncio
-
 from sqlalchemy import create_engine
-
-from classes import FuturesProcessor, FuturesTrade
+from classes import FuturesProcessor
+from func import create_postgresql_connection, read_and_print_data, \
+    close_database_connection
 
 
 async def main():
@@ -23,3 +23,12 @@ if __name__ == '__main__':
     asyncio.set_event_loop(event_loop)
 
     event_loop.run_until_complete(main())
+
+    # database_url = (
+    #     'postgresql://postgres:12345@localhost:5432/postgres')
+    # engine, session = create_postgresql_connection(database_url)
+    #
+    # if session:
+    #     read_and_print_data(session)
+    #
+    # close_database_connection(engine)
