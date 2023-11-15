@@ -1,7 +1,5 @@
 import asyncio
 
-from sqlalchemy import create_engine
-
 from classes import FuturesProcessor
 from func import ethusdt_regression
 

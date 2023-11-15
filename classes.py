@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import json
-from datetime import datetime
 
 import pandas as pd
 import websockets
@@ -14,7 +13,7 @@ from sqlalchemy import (create_engine,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from func import check_eth_price, ethusdt_regression
+from func import check_eth_price
 
 price_history = []
 
@@ -24,7 +23,8 @@ Base = declarative_base()
 class FuturesTrade(Base):
     """
     Модель для таблицы futures_trades в базе данных.
-    Содержит информацию о сделках по фьючерсам, такую как символ, цена и временная метка.
+    Содержит информацию о сделках по фьючерсам, такую как символ,
+    цена и временная метка.
     """
     __tablename__ = 'futures_trades'
 
@@ -37,7 +37,8 @@ class FuturesTrade(Base):
 class FuturesProcessor:
     """
     Класс для обработки данных о торговле фьючерсами.
-    Подключается к Binance WebSocket, обрабатывает сделки и сохраняет их в базу данных.
+    Подключается к Binance WebSocket, обрабатывает сделки и
+    сохраняет их в базу данных.
     Также вызывает функцию для проверки изменения цены ETH.
     """
 
