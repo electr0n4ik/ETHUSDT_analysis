@@ -3,7 +3,8 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta
-
+from pathlib import Path
+from dotenv import load_dotenv
 import pandas as pd
 import websockets
 from sqlalchemy import (create_engine,
@@ -19,6 +20,10 @@ from source.func import check_eth_price, print_suc_del
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+env_path = BASE_DIR / '.env'
+load_dotenv(dotenv_path=env_path)
+
 price_history = []
 
 Base = declarative_base()
@@ -30,7 +35,7 @@ class FuturesTrade(Base):
     Содержит информацию о сделках по фьючерсам, такую как символ,
     цена и временная метка.
     """
-    __tablename__ = 'futures_trades'
+    __tablename__ = os.getenv('TABLE_NAME')
 
     id = Column(Integer, primary_key=True)
     symbol = Column(String)
@@ -54,9 +59,7 @@ class FuturesProcessor:
             symbol (str): Символ для отслеживания торгов.
         """
         self.symbol = symbol
-        self.engine = create_engine(
-            'postgresql://postgres:12345@localhost:5432/postgres'
-        )
+        self.engine = create_engine(os.getenv('ENGINE'))
 
         self.session = self.create_session(self.engine)
         self.create_table(self.symbol)
@@ -107,9 +110,7 @@ class FuturesProcessor:
 
                 await check_eth_price(trade_price)
 
-                engine = create_engine(
-                    'postgresql://postgres:12345@localhost:5432/postgres')
-                session = self.create_session(engine)
+                session = self.create_session(self.engine)
 
                 trade_entry = FuturesTrade(
                     symbol=trade_symbol,
