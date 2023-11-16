@@ -4,9 +4,10 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from dotenv import load_dotenv
+
 import pandas as pd
 import websockets
+from dotenv import load_dotenv
 from sqlalchemy import (create_engine,
                         Column,
                         Integer,
@@ -41,6 +42,10 @@ class FuturesTrade(Base):
     symbol = Column(String)
     price = Column(Numeric)
     timestamp = Column(DateTime)
+
+    mapper_config = {
+        'confirm_deleted_rows': False,
+    }
 
 
 class FuturesProcessor:

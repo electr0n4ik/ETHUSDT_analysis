@@ -92,8 +92,9 @@ async def ethusdt_regression(eth_df, btc_df):
     # TODO хочу ее сделать основной для вывода независимой цены ethusdt
 
     eth_df['Timestamp'] = pd.to_datetime(eth_df['Timestamp'])
-    eth_df['Timestamp'] = eth_df['Timestamp'].dt.round('S')
+    btc_df['Timestamp'] = pd.to_datetime(btc_df['Timestamp'])
 
+    eth_df['Timestamp'] = eth_df['Timestamp'].dt.round('S')
     btc_df['Timestamp'] = btc_df['Timestamp'].dt.round('S')
 
     # Объединяем данные из двух DataFrame
