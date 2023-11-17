@@ -88,8 +88,6 @@ async def adjust_ethusdt_price(data_frame):
 
 
 async def ethusdt_regression(eth_df, btc_df):
-    # TODO дошел до этой функции
-    # TODO хочу ее сделать основной для вывода независимой цены ethusdt
 
     eth_df['Timestamp'] = pd.to_datetime(eth_df['Timestamp'])
     eth_df['Timestamp'] = eth_df['Timestamp'].dt.round('S')
