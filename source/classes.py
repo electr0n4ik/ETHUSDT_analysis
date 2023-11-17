@@ -182,18 +182,23 @@ class FuturesProcessor:
                 f"wss://stream.binance.com:9443/ws/{self.symbol}@trade",
                 ping_timeout=20,
                 # Таймаут ожидания ответа на пинг (в секундах)
-                close_timeout=60,
+                close_timeout=None,
                 # Таймаут на закрытие соединения (в секундах),
                 # None - неограниченный
                 max_queue=2 ** 5,  # Максимальный размер очереди сообщений
         ) as ws:
             while True:
-                response = await ws.recv()
+                try:
+                    response = await ws.recv()
 
-                handle_trade_task = asyncio.create_task(
-                    self.handle_trade(response))
-                delete_old_trades_task = asyncio.create_task(
-                    self.delete_old_trades())
-                await asyncio.gather(handle_trade_task, delete_old_trades_task)
+                    handle_trade_task = asyncio.create_task(
+                        self.handle_trade(response))
+                    delete_old_trades_task = asyncio.create_task(
+                        self.delete_old_trades())
+                    await asyncio.gather(handle_trade_task,
+                                         delete_old_trades_task)
 
-                # await self.read_data_to_dataframe()
+                    # await self.read_data_to_dataframe()
+                except:
+                    if not KeyboardInterrupt:
+                        continue

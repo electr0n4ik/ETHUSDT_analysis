@@ -4,6 +4,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import psycopg2
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -88,17 +89,37 @@ async def adjust_ethusdt_price(data_frame):
 
 
 async def ethusdt_regression(eth_df, btc_df):
+    conn = psycopg2.connect(dbname='postgres', user='postgres',
+                            password='12345', host='localhost', port='5432')
+    cursor = conn.cursor()
 
-    eth_df['Timestamp'] = pd.to_datetime(eth_df['Timestamp'])
-    eth_df['Timestamp'] = eth_df['Timestamp'].dt.round('S')
+    query = "SELECT COUNT(*) FROM futures_trades;"
+    cursor.execute(query)
 
-    btc_df['Timestamp'] = btc_df['Timestamp'].dt.round('S')
+    # Получение результата
+    row_count = cursor.fetchone()[0]
 
-    # Объединяем данные из двух DataFrame
-    merged_df = pd.merge(eth_df, btc_df, on='Timestamp',
-                         suffixes=('_eth', '_btc'))
+    # Проверка, что таблица не пуста
+    if row_count > 0:
+        print("Таблица не пуста.")
+    else:
+        print("Таблица пуста.")
 
-    # Вызываем функцию для получения скорректированной цены ethusdt
-    adjusted_price = await adjust_ethusdt_price(merged_df)
+    # Закрытие соединения
+    cursor.close()
+    conn.close()
+    if row_count > 0:
 
-    print(adjusted_price)
+        eth_df['Timestamp'] = pd.to_datetime(eth_df['Timestamp'])
+        eth_df['Timestamp'] = eth_df['Timestamp'].dt.round('S')
+
+        btc_df['Timestamp'] = btc_df['Timestamp'].dt.round('S')
+
+        # Объединяем данные из двух DataFrame
+        merged_df = pd.merge(eth_df, btc_df, on='Timestamp',
+                             suffixes=('_eth', '_btc'))
+
+        # Вызываем функцию для получения скорректированной цены ethusdt
+        adjusted_price = await adjust_ethusdt_price(merged_df)
+
+        print(adjusted_price)
