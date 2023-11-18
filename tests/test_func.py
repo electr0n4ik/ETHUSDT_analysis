@@ -10,6 +10,8 @@ from source.func import (find_regression_coefficient,
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# TODO добавить тесты классов
+
 
 @pytest.mark.asyncio
 async def test_find_regression_coefficient():

@@ -18,16 +18,11 @@ async def main():
 
     await asyncio.gather(eth_task, btc_task, regression_task)
 
-    # await asyncio.gather(eth_task, btc_task)
-    # await ethusdt_regression(eth_df, btc_df)
-
 
 if __name__ == '__main__':
-    # while True:
-    #     try:
+
     event_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(event_loop)
 
     event_loop.run_until_complete(main())
-        # except:
-        #     continue
+

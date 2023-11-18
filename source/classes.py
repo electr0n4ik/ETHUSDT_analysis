@@ -28,6 +28,12 @@ price_history = []
 
 Base = declarative_base()
 
+# TODO раздробить класс processor:
+#   на управление БД,
+#   работа с данными,
+#   работа логики.
+
+
 
 class FuturesTrade(Base):
     """
